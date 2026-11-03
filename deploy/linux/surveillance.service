@@ -1,0 +1,21 @@
+# Mini-PC / Jetson (Linux). Remplace __DIR__ et __USER__, puis :
+#   sudo cp deploy/linux/surveillance.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now surveillance
+#   journalctl -u surveillance -f
+[Unit]
+Description=Surveillance caméras (détection personnes / véhicules / animaux)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__DIR__
+ExecStart=__DIR__/.venv/bin/python __DIR__/main.py --config __DIR__/config.yaml
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

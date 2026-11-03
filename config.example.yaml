@@ -1,0 +1,54 @@
+# Copie ce fichier en config.yaml. Les secrets (${...}) se mettent dans .env, jamais ici.
+
+model: yolo11n.pt      # yolo11n.pt (rapide) | yolo11s.pt (plus précis)
+device: mps            # mps (Mac Apple Silicon) | cpu | 0 (GPU NVIDIA / Jetson)
+conf: 0.45             # seuil de confiance (monte à 0.55-0.6 si fausses alertes la nuit)
+imgsz: 640
+
+storage:
+  dir: data            # captures, clips, base de données et logs
+  retention_days: 14   # suppression automatique au-delà
+  min_free_gb: 5       # supprime les plus vieux clips si le disque descend sous ce seuil
+
+clips:
+  enabled: true
+  pre_seconds: 5       # secondes enregistrées AVANT l'événement
+  post_seconds: 10     # secondes APRÈS (prolongé si un autre événement arrive)
+  max_seconds: 30
+  max_width: 1280
+
+telegram:
+  enabled: true
+  token: ${TELEGRAM_TOKEN}
+  chat_ids: ["${TELEGRAM_CHAT_ID}"]   # plusieurs destinataires : ["${CHAT_1}", "${CHAT_2}"]
+
+supabase:              # historique en ligne pour le tableau de bord web (optionnel)
+  enabled: false
+  url: ${SUPABASE_URL}
+  anon_key: ${SUPABASE_ANON_KEY}
+  email: ${SUPABASE_EMAIL}
+  password: ${SUPABASE_PASSWORD}
+  bucket: captures
+
+plates:                # lecture de plaques (optionnel) : pip install "fast-alpr[onnx]"
+  enabled: false
+  min_confidence: 0.6
+
+cameras:
+  - name: cour
+    source: rtsp://${CAM_COUR_USER}:${CAM_COUR_PASS}@192.168.1.64:554/Streaming/Channels/102
+    fps: 10            # images analysées par seconde
+    zones:             # dessine-les avec : python zone_editor.py --camera cour
+      - name: cour
+        polygon: [[0.05, 0.45], [0.95, 0.45], [0.95, 1.0], [0.05, 1.0]]
+        categories: [personne, vehicule, animal]
+        min_frames: 3  # l'objet doit rester 3 images dans la zone (évite les faux positifs)
+        cooldown: 60   # secondes min entre 2 alertes de même type dans cette zone
+      - name: portail
+        polygon: [[0.30, 0.20], [0.60, 0.20], [0.60, 0.45], [0.30, 0.45]]
+        categories: [personne]
+        schedule: ["22:00-06:00"]   # actif seulement la nuit (absent = 24 h/24)
+
+  - name: webcam       # test avec la webcam du Mac ; sans zones = toute l'image, 24 h/24
+    source: 0
+    fps: 10
